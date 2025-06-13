@@ -9,6 +9,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const MongoDB_URI = process.env.MongoDB_URI;
+// const MongoDB_URI = "mongodb+srv://rupendrachandaluri:R9912192624r@cluster0.iqrea.mongodb.net/HANElytics_Clients?retryWrites=true&w=majority&appName=Cluster0";
 const MongoDB_Database = process.env.MongoDB_Database;
 const MongoDB_Collection = process.env.MongoDB_Collection;
 
@@ -24,7 +25,6 @@ const SQL_Table_Name = process.env.SQL_Table_Name;
 async function transferDataFromMongoDBToSQL() {
   try {
     // Connect to MongoDB
-
     const mongoClient = new MongoClient(MongoDB_URI);
 
     await mongoClient.connect();
@@ -65,13 +65,51 @@ async function transferDataFromMongoDBToSQL() {
     await mysqlConn.execute(createQuery)
     console.log(`Table ${SQL_Table_Name} `)
 
+    await mysqlConn.execute(`DELETE FROM \`${SQL_Table_Name}\``);
 
+    // 6. Insert data
+    for (const row of cleanedData) {
+  const placeholders = keys.map(() => '?').join(', ');
+  const values = keys.map(k => row[k] === undefined ? null : row[k]);
+  const insertQuery = `INSERT INTO \`${SQL_Table_Name}\` (${keys.map(k => `\`${k}\``).join(', ')}) VALUES (${placeholders})`;
+  await mysqlConn.execute(insertQuery, values);
+}
+
+    console.log(`✅ Inserted ${cleanedData.length} rows into MySQL`);
+
+    await mysqlConn.end();
+    await mongoClient.close();
   } catch (error) {
     console.log("Error occurred while Fetching", error);
   }
 }
 
 transferDataFromMongoDBToSQL();
+
+// const { MongoClient } = require('mongodb');
+
+// Replace with your actual MongoDB connection string
+// const uri = "mongodb+srv://<username>:<password>@<cluster>.mongodb.net";
+
+// const MongoDB_URI = "mongodb+srv://rupendrachandaluri:R9912192624r@cluster0.iqrea.mongodb.net/HANElytics_Clients?retryWrites=true&w=majority&appName=Cluster0";
+
+// async function listDatabases() {
+//   const client = new MongoClient(MongoDB_URI);
+
+//   try {
+//     await client.connect();
+//     const databasesList = await client.db().admin().listDatabases();
+
+//     console.log("Databases:");
+//     databasesList.databases.forEach(db => console.log(` - ${db.name}`));
+//   } catch (err) {
+//     console.error("Error listing databases:", err);
+//   } finally {
+//     await client.close();
+//   }
+// }
+
+// listDatabases();
 
 app.listen(3000, () => {
   console.log("Server running on port 3000 Successfully!");
